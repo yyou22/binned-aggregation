@@ -174,6 +174,10 @@ def attack(model, X_data, Y_data):
 
 		perturbed_data = fgsm(data, epsilon, target, model)
 
+		#display image
+		#plt.imshow(perturbed_data[0].cpu().numpy().transpose(1 , 2 , 0))
+		#plt.show()
+
 		perturbed_data = normalize(perturbed_data)
 
 		X_ = Variable(perturbed_data)
@@ -244,8 +248,8 @@ def main():
 	elif args.model == "vgg19":
 		model = vgg19_bn(pretrained=True)
 
-	X_data = np.load("../data/X.npy")
-	Y_data = np.load("../data/Y.npy")
+	X_data = np.load("/content/data/X.npy")
+	Y_data = np.load("/content/data/Y.npy")
 
 	if args.natural:
 		natural(model, X_data, Y_data)

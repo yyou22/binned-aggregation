@@ -7,6 +7,7 @@ import torch.optim as optim
 from torchvision import datasets, transforms
 from torch.autograd import Variable
 from torchvision import transforms as T
+import torchvision
 import numpy as np
 import matplotlib.pyplot as plt
 import argparse
@@ -19,6 +20,8 @@ parser.add_argument('--epsilon', default=0.03, type=float, help='epsilon, the ma
 parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19], model that is being attacked')
 parser.add_argument('--test-batch-size', type=int, default=64, metavar='N',
                     help='input batch size for testing (default: 200)')
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='disables CUDA training')
 
 args = parser.parse_args()
 
@@ -30,6 +33,8 @@ std = [0.2471, 0.2435, 0.2616]
 inv_mean = [-0.4914/0.2471, -0.4822/0.2435, -0.4465/0.2616]
 inv_std = [1/0.2471, 1/0.2435, 1/0.2616]
 
+epsilon = args.epsilon
+
 # settings
 use_cuda = not args.no_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -39,6 +44,13 @@ kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
 transform_test = transforms.Compose([transforms.ToTensor(),])
 testset = torchvision.datasets.CIFAR10(root='/content/data', train=False, download=True, transform=transform_test)
 test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+
+def margin_loss(logits,y):
+	logit_org = logits.gather(1,y.view(-1,1))
+	logit_target = logits.gather(1,(logits - torch.eye(10, device=y.device)[y] * 9999).argmax(1, keepdim=True))
+	loss = -logit_org + logit_target
+	loss = torch.sum(loss)
+	return loss
 
 def fgsm(image, epsilon, target, model):
 
@@ -50,7 +62,7 @@ def fgsm(image, epsilon, target, model):
 	#print(out.data[0])
 	#print(F.softmax(out.data[0]))
 
-	loss = margin_loss(out, target)
+	loss = margin_loss(out, y)
 
 	model.zero_grad()
 
@@ -84,7 +96,10 @@ def attack(model, test_loader):
 	for data, target in test_loader:
 
 		data, target = data.to(device), target.to(device)
-		data = normalize(data)
+
+		#display image
+		#plt.imshow(data[0].cpu().numpy().transpose(1 , 2 , 0))
+		#plt.show()
 
 		perturbed_data = fgsm(data, epsilon, target, model)
 
@@ -93,31 +108,35 @@ def attack(model, test_loader):
 		X_ = Variable(perturbed_data)
 		out = model(X_)
 
-		confid_ = F.softmax(out.data[0])
+		confid_ = F.softmax(out.data)
 
-		confid_level.extend(confid_.numpy())
+		confid_level.extend(confid_.cpu().numpy())
 
-		pred = out.data.max(1)[1]
+		pred = out.data.max(1)[1].cpu()
 		pred_.extend(pred)
 
 		wrong += (out.data.max(1)[1] != Variable(target).data).float().sum()
 
 		#undo transformation
 		perturbed_data = inv_normalize(perturbed_data)
+		
+		#display image
+		#plt.imshow(perturbed_data[0].cpu().numpy().transpose(1 , 2 , 0))
+		#plt.show()
 
 		#obtain the noise applied and save it as a matrix
 		og_image = data
-		og_image = og_image.numpy()
+		og_image = og_image.cpu().numpy()
 
-		og_image = np.array(np.expand_dims(og_image, axis=0), dtype=np.float32)
-		diff = og_image - perturbed_data.numpy()
+		#og_image = np.array(np.expand_dims(og_image, axis=0), dtype=np.float32)
+		diff = og_image - perturbed_data.cpu().numpy()
 		diff = np.sign(diff)
 		diff = (diff+1)/2
 
-		noise.extend(diff[0])
+		noise.extend(diff)
 
-		adv_examples.extend(perturbed_data[0].numpy().transpose(1 , 2 , 0))
-
+		adv_examples.extend(perturbed_data.cpu().numpy().transpose(0, 2 , 3 , 1))
+  
 	adv_examples = np.array(adv_examples)
 	confid_level = np.array(confid_level)
 	pred_ = np.array(pred_)
@@ -142,7 +161,10 @@ def attack(model, test_loader):
 
 def main():
 
-	model = vgg16_bn(pretrained=True)
+	if args.model == "vgg16":
+		model = vgg16_bn(pretrained=True).to(device)
+	elif args.model == "vgg19":
+		model = vgg19_bn(pretrained=True).to(device)
 
 	attack(model, test_loader)
 
