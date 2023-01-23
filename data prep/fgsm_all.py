@@ -1,5 +1,6 @@
 from __future__ import print_function
 from cifar10_models.vgg import vgg16_bn, vgg19_bn
+from cifar10_models.resnet import resnet18, resnet34
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -13,6 +14,8 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 import pickle
+
+from models.resnet import *
 
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
@@ -77,6 +80,52 @@ def fgsm(image, epsilon, target, model):
 	perturbed_image = torch.clamp(perturbed_image, 0.0, 1.0)
 
 	return perturbed_image
+
+def natural(model, test_loader):
+
+	model.eval()
+
+	normalize = T.Normalize(mean, std)
+
+	wrong = 0
+	confid_level = []
+	pred_ = []
+
+	for data, target in test_loader:
+
+		data, target = data.to(device), target.to(device)
+
+		data = normalize(data)
+
+		X, y = Variable(data, requires_grad = True), Variable(target)
+
+		# output of model
+		out = model(X)
+
+		confid_ = F.softmax(out.data)
+		confid_level.extend(confid_.cpu().numpy())
+
+		pred = out.data.max(1)[1].cpu()
+		pred_.extend(pred)
+
+		wrong += (out.data.max(1)[1] != Variable(target).data).float().sum()
+
+	confid_level = np.array(confid_level)
+	pred_ = np.array(pred_)
+
+	path = '../data/' + args.model + '/000'
+
+	if not os.path.exists(path):
+		os.makedirs(path)
+
+	np.save(path + '/confid_level.npy', confid_level)
+	np.save(path + '/Y_hat.npy', pred_)
+
+	f = open(path + '/error.pckl', 'wb')
+	pickle.dump(wrong, f)
+	f.close()
+
+	print("Natural Error:" + str(wrong))
 
 def attack(model, test_loader):
 
@@ -165,8 +214,16 @@ def main():
 		model = vgg16_bn(pretrained=True).to(device)
 	elif args.model == "vgg19":
 		model = vgg19_bn(pretrained=True).to(device)
+	if args.model == "resnet":
+		model = resnet34(pretrained=True).to(device)
+	elif args.model == "TRADES":
+		model = ResNet34().to(device)
+		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
 
-	attack(model, test_loader)
+	if args.natural:
+		natural(model, test_loader)
+	else:
+		attack(model, test_loader)
 
 if __name__ == "__main__":
 	main()
