@@ -1,5 +1,6 @@
 from __future__ import print_function
 from cifar10_models.vgg import vgg16_bn, vgg19_bn
+from cifar10_models.resnet import resnet18, resnet34
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -12,11 +13,19 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 import pickle
+import torchvision
+
+from models.resnet import *
+from feature_extractor import FeatureExtractor
 
 parser = argparse.ArgumentParser(description='VGG Extracted Features on adversarial CIFAR10 dataset')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
 parser.add_argument('--epsilon', default=0.03, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
 parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19], model that is being attacked')
+parser.add_argument('--no-cuda', action='store_true', default=False,
+                    help='disables CUDA training')
+parser.add_argument('--test-batch-size', type=int, default=64, metavar='N',
+                    help='input batch size for testing (default: 200)')
 
 args = parser.parse_args()
 
@@ -43,6 +52,8 @@ def feature_(model, test_loader):
 	model.eval()
 
 	normalize = T.Normalize(mean, std)
+
+	features = []
 
 	for data, target in test_loader:
 
