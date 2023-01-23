@@ -66,7 +66,7 @@ def feature_(model, test_loader):
 		# output of model
 		out = model(X)
 
-		features.append(out.cpu().detach().numpy())
+		features.extend(out.cpu().detach().numpy())
 
 	if args.natural:
 		path = '../data/' + args.model + '/000'

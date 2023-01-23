@@ -28,7 +28,7 @@ def TSNE_(data):
 def main():
 
 	#Y_data = np.load("../data/Y.npy")
-	Y_data = testset.targets
+	Y_data = np.array(testset.targets)
 	Y_data = Y_data.reshape((Y_data.shape[0], 1))
 
 	X_data_list = []
@@ -38,10 +38,10 @@ def main():
 		path = '../data/' + args.model + '/00'  + str(i) + '/'
 
 		path_x = path + 'features.npy'
-		X_data_list.append(np.load(path_x))
+		X_data_list.append(np.load(path_x, allow_pickle=True))
 
 		path_y = path + 'Y_hat.npy'
-		Y_hat_list.append(np.load(path_y))
+		Y_hat_list.append(np.load(path_y, allow_pickle=True))
 
 	X_data = np.concatenate((X_data_list[0], X_data_list[1], X_data_list[2], X_data_list[3]))
 
@@ -52,14 +52,12 @@ def main():
 
 	X_data_t = TSNE_(X_data)
 
-	tx, ty = X_data_t[:, 0].reshape(100*4, 1), X_data_t[:, 1].reshape(100*4, 1) #change size
+	tx, ty = X_data_t[:, 0].reshape(10000*4, 1), X_data_t[:, 1].reshape(10000*4, 1) #change size
 	tx = (tx-np.min(tx)) / (np.max(tx) - np.min(tx))
 	ty = (ty-np.min(ty)) / (np.max(ty) - np.min(ty))
 
 	tx_list = np.array_split(tx, 4)
 	ty_list = np.array_split(ty, 4)
-
-	py_list = np.array_split(py, 4)
 
 	type_ = ['%.5f'] * 12 + ['%d'] * 2
 
