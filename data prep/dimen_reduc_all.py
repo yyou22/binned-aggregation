@@ -85,7 +85,7 @@ def main():
 
 		Y_hat = Y_hat_list[i].reshape((Y_hat_list[i].shape[0], 1))
 
-		result = np.concatenate((tx_list[i], ty_list[i], confid_level, Y_hat, Y_data), axis=1)
+		result = np.concatenate((tx_list[i], ty_list[i], px_list[i], py_list[i], confid_level, Y_hat, Y_data), axis=1)
 		np.savetxt(path + "/data.csv", result, header="xpost,ypost,xposp,yposp,0,1,2,3,4,5,6,7,8,9,pred,target", comments='', delimiter=',', fmt=type_)
 
 if __name__ == "__main__":
