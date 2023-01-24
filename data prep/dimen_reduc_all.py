@@ -68,7 +68,7 @@ def main():
 
 	X_data_p = PCA_(X_data)
 
-	px, py = X_data_p[:, 0].reshape(100*4, 1), X_data_p[:, 1].reshape(100*4, 1) #change size
+	px, py = X_data_p[:, 0].reshape(10000*4, 1), X_data_p[:, 1].reshape(10000*4, 1) #change size
 	px = (px-np.min(px)) / (np.max(px) - np.min(px))
 	py = (py-np.min(py)) / (np.max(py) - np.min(py))
 
