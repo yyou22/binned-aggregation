@@ -17,6 +17,7 @@ import torchvision
 
 from models.resnet import *
 from feature_extractor import FeatureExtractor
+from torch.utils.data import TensorDataset, DataLoader
 
 parser = argparse.ArgumentParser(description='VGG Extracted Features on adversarial CIFAR10 dataset')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
@@ -80,47 +81,6 @@ def feature_(model, test_loader):
 
 	np.save(path + '/features.npy', features)
 
-def feature_adv(model, X_data):
-
-	model.eval()
-
-	transform_ = T.Compose(
-			[
-				T.ToTensor(),
-				T.Normalize(mean, std),
-			]
-		)
-
-	features = []
-
-	for idx in range(start_idx, X_data.shape[0]):
-
-		x_data_ = X_data[idx]#.transpose(1 , 2 , 0)
-
-		x_data = transform_(x_data_)
-		x_data = x_data.numpy()
-
-		# load image
-		image = np.array(np.expand_dims(x_data, axis=0), dtype=np.float32)
-		data = torch.from_numpy(image).to(device)
-		X = Variable(data)
-
-		out = model(X)
-
-		features.append(out[0].detach().numpy())
-
-	if args.natural:
-		path = '../data/' + args.model + '/000'
-	else:
-		path = '../data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
-
-	if not os.path.exists(path):
-		os.makedirs(path)
-
-	features = np.array(features)
-
-	np.save(path + '/features.npy', features)
-
 def main():
 
 	if args.model == "vgg16":
@@ -139,8 +99,14 @@ def main():
 		feature_(model, test_loader)
 	else:
 		path = '../data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
-		X_data = np.load(path + '/adv_X.npy')
-		feature_adv(model, X_data)
+		X_data = np.load(path + '/adv_X.npy').transpose(0,3,1,2)
+
+		tensor_x = torch.Tensor(X_data)
+		tensor_y = torch.Tensor(testset.targets)
+
+		my_dataset = TensorDataset(tensor_x,tensor_y) # create datset
+		my_dataloader = DataLoader(my_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs) # create dataloader
+		feature_(model, my_dataloader)
 
 if __name__ == "__main__":
 	main()
