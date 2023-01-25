@@ -80,6 +80,47 @@ def feature_(model, test_loader):
 
 	np.save(path + '/features.npy', features)
 
+def feature_adv(model, X_data):
+
+	model.eval()
+
+	transform_ = T.Compose(
+			[
+				T.ToTensor(),
+				T.Normalize(mean, std),
+			]
+		)
+
+	features = []
+
+	for idx in range(start_idx, X_data.shape[0]):
+
+		x_data_ = X_data[idx]#.transpose(1 , 2 , 0)
+
+		x_data = transform_(x_data_)
+		x_data = x_data.numpy()
+
+		# load image
+		image = np.array(np.expand_dims(x_data, axis=0), dtype=np.float32)
+		data = torch.from_numpy(image).to(device)
+		X = Variable(data)
+
+		out = model(X)
+
+		features.append(out[0].detach().numpy())
+
+	if args.natural:
+		path = '../data/' + args.model + '/000'
+	else:
+		path = '../data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
+
+	if not os.path.exists(path):
+		os.makedirs(path)
+
+	features = np.array(features)
+
+	np.save(path + '/features.npy', features)
+
 def main():
 
 	if args.model == "vgg16":
@@ -94,7 +135,12 @@ def main():
 		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
 		model = FeatureExtractor(model)
 
-	feature_(model, test_loader)
+	if args.natural:
+		feature_(model, test_loader)
+	else:
+		path = '../data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
+		X_data = np.load(path + '/adv_X.npy')
+		feature_adv(model, X_data)
 
 if __name__ == "__main__":
 	main()
