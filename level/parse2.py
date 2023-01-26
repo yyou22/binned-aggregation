@@ -41,11 +41,11 @@ def lvl(datas):
 	type_ = ['%d'] * 2 + ['%.5f'] * 14 + ['%d'] * 2
 
 	result = np.concatenate((idx, in_lvl, lvl), axis=1)
-	np.savetxt("./vgg16_1_lvl4.csv", result, header="ogi,vis,xpost,ypost,xposp,yposp,0,1,2,3,4,5,6,7,8,9,pred,target", comments='', delimiter=',', fmt=type_)
+	np.savetxt("./vgg19_1_lvl4.csv", result, header="ogi,vis,xpost,ypost,xposp,yposp,0,1,2,3,4,5,6,7,8,9,pred,target", comments='', delimiter=',', fmt=type_)
 
 def main():
 
-	datas = np.genfromtxt('./data_all_vgg16_1.csv', dtype=float, delimiter=',', skip_header=1)
+	datas = np.genfromtxt('./data_all_vgg19_1.csv', dtype=float, delimiter=',', skip_header=1)
 
 	lvl(datas)
 
