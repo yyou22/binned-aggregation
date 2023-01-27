@@ -14,7 +14,7 @@ def lvl4(datas):
 	idx__ = np.load('./idx2.npy')
 	idx___ = np.load('./idx3.npy')
 
-	bin_ = np.empty([80, 40])
+	bin_ = np.empty([80, 80])
 	bin_.fill(-1)
 
 	lvl4 = []
@@ -25,11 +25,11 @@ def lvl4(datas):
 	for data in datas:
 
 		bin_y = math.floor(data[1] * 80);
-		bin_x = math.floor(data[0] * 40);
+		bin_x = math.floor(data[0] * 80);
 
 		if (bin_y == 80):
 			bin_y = bin_y - 1
-		if (bin_x == 40):
+		if (bin_x == 80):
 			bin_x = bin_x = 1
 
 		if (bin_[bin_y][bin_x] == -1):
