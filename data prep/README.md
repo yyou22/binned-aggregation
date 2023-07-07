@@ -32,6 +32,13 @@ python feature_all.py --model [vgg16|vgg19|resnet|TRADES] --epsilon [0.01|0.02|0
 
 This will save the features as `features.npy` in the corresponding folder.
 
+## Apply t-SNE and Output CSV Files
+```python
+python dimen_reduc_all.py --model [vgg16|vgg19|resnet|TRADES]
+```
+
+This will apply dimensionality reduction on the images and output it as a csv file `data.csv` in the corresponding path combined with confidence levels, prediction labels, and ground truth labels.
+
 
 # The version below is for the old FGSM explainer in which only a subset of the dataset is used
 
