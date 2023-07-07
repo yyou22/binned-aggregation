@@ -7,6 +7,34 @@ For our implementation, we use pretrained PyTorch models by [huyvnphan](https://
 python train.py --download_weights 1
 ```
 
+New version, in which all data are used:
+
+## Conduct Attack on Data
+```python
+python fgsm_all.py --model [vgg16|vgg19|resnet|TRADES] --epsilon [0.01|0.02|0.03]
+```
+This will create sub-folders within `../data/` and store the generated outputs. An example path would be `../data/vgg16/001/[generated files]`, where `vgg16` stands for the model chosen and `001` stands for perturbation size 0.01.
+
+`adv_X.npy` stores the perturbed images as matrices, `confid_level.npy` stores the confidence levels across all classes in each prediction, `error.pckl` stores the robust error, `Y_hat.npy` stores the predicted labels, and `noise.npy` stores the applied perturbation normalized as images.
+
+## Predict on Unperturbed Dataset
+```python
+python fgsm.py --model [vgg16|vgg19|resnet|TRADES] --natural
+```
+If the flag `--natural` is present, it will ignore the argument passed to `--epsilon`.
+
+`confid_level.npy` stores the confidence levels across all classes in each prediction, `error.pckl` stores the natural error. The outputs will be stored in `../data/[model name]/000/`
+
+## Extract features of the VGG models
+```python
+python feature_all.py --model [vgg16|vgg19|resnet|TRADES] --epsilon [0.01|0.02|0.03] [--natural]
+```
+
+This will save the features as `features.npy` in the corresponding folder.
+
+
+# The version below is for the old FGSM explainer in which only a subset of the dataset is used
+
 ## Sample a subset of CIFAR10 dataset
 ```python
 python select_data.py
