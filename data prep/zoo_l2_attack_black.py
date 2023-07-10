@@ -20,12 +20,12 @@ from cifar10_models.resnet import resnet18, resnet34
 mean = [0.4914, 0.4822, 0.4465]
 std = [0.2471, 0.2435, 0.2616]
 
-normalize = T.Normalize(mean, std)
+normalize = transforms.Normalize(mean, std)
 
 inv_mean = [-0.4914/0.2471, -0.4822/0.2435, -0.4465/0.2616]
 inv_std = [1/0.2471, 1/0.2435, 1/0.2616]
 
-inv_normalize = T.Normalize(inv_mean, inv_std)
+inv_normalize = transforms.Normalize(inv_mean, inv_std)
 
 """##L2 Black Box Attack"""
 
