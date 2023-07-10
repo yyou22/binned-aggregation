@@ -20,7 +20,7 @@ from models.resnet import *
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
 parser.add_argument('--epsilon', default=0.03, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
-parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19], model that is being attacked')
+parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19|resnet|trades], model that is being attacked')
 parser.add_argument('--test-batch-size', type=int, default=64, metavar='N',
                     help='input batch size for testing (default: 200)')
 parser.add_argument('--no-cuda', action='store_true', default=False,
