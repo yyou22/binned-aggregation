@@ -256,10 +256,14 @@ def generate_data(test_loader,targeted,samples,start):
 	inputs=np.array(inputs)
 	targets=np.array(targets)
 
+	print(inputs.shape)
+	print(targets.shape)
+
 	return inputs,targets
 
 def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	r = []
+	print(len(inputs))
 	print('go up to',len(inputs))
 	# run 1 image at a time, minibatches used for gradient evaluation
 	for i in range(len(inputs)):
@@ -268,7 +272,7 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 		r.append(attack)
 	return np.array(r)
 
-if __name__=='__main__':
+def main():
 	np.random.seed(42)
 	torch.manual_seed(42)
 
@@ -297,8 +301,10 @@ if __name__=='__main__':
 	#samples is the how many samples to take in total : for targeted, 1 means all 9 class target -> 9 total samples whereas for untargeted the original data 
 	#sample is taken i.e. 1 sample only 
 	inputs, targets = generate_data(test_loader,targeted,samples=5,start=0)
+
 	timestart = time.time()
 	adv = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
+
 	timeend = time.time()
 	print("Took",(timeend-timestart)/60.0,"mins to run",len(inputs),"samples.")
 
@@ -366,3 +372,9 @@ if __name__=='__main__':
 			plt.savefig('newton_untargeted_cifar10.png')
 		else:
 			plt.savefig('adam_untargeted_cifar10.png') 
+
+if __name__=='__main__':
+
+	main()
+
+	
