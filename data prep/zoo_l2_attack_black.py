@@ -291,12 +291,12 @@ if __name__=='__main__':
 
 	use_log=True
 	use_tanh=True
-	targeted=True
+	targeted=False
 	solver="newton"
 	#start is a offset to start taking sample from test set
 	#samples is the how many samples to take in total : for targeted, 1 means all 9 class target -> 9 total samples whereas for untargeted the original data 
 	#sample is taken i.e. 1 sample only 
-	inputs, targets = generate_data(test_loader,targeted,samples=10,start=6)
+	inputs, targets = generate_data(test_loader,targeted,samples=5,start=0)
 	timestart = time.time()
 	adv = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
 	timeend = time.time()
