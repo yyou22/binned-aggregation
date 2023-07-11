@@ -20,12 +20,21 @@ from cifar10_models.resnet import resnet18, resnet34
 mean = [0.4914, 0.4822, 0.4465]
 std = [0.2471, 0.2435, 0.2616]
 
+tensor_ = transforms.ToTensor()
+
 normalize = transforms.Normalize(mean, std)
 
 inv_mean = [-0.4914/0.2471, -0.4822/0.2435, -0.4465/0.2616]
 inv_std = [1/0.2471, 1/0.2435, 1/0.2616]
 
 inv_normalize = transforms.Normalize(inv_mean, inv_std)
+
+transform_ = transforms.Compose(
+			[
+				transforms.ToTensor(),
+				transforms.Normalize(mean, std),
+			]
+		)
 
 """##L2 Black Box Attack"""
 
@@ -73,9 +82,9 @@ def loss_run(input,target,model,modifier,use_tanh,use_log,targeted,confidence,co
 	else:
 		pert_out = input + modifier
 
-	pert_out_nor = normalize(pert_out)
+	pert_out_nor = normalize(pert_out + 0.5)
 
-	output = model(pert_out)
+	output = model(pert_out_nor)
 	
 	if use_log:
 		output = F.softmax(output,-1)
@@ -230,7 +239,8 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 
 def generate_data(test_loader,targeted,samples,start):
 	inputs=[]
-	targets=[]
+	labels=[]
+	targets = []
 	num_label=10
 	cnt=0
 	for i, data in enumerate(test_loader):
@@ -244,9 +254,11 @@ def generate_data(test_loader,targeted,samples,start):
 							continue
 						inputs.append(data[0].numpy())
 						targets.append(np.eye(num_label)[j])
+						labels.append(label)
 				else:
 					inputs.append(data[0].numpy())
 					targets.append(np.eye(num_label)[label.item()])
+					labels.append(label)
 				cnt+=1
 			else:
 				continue
@@ -255,11 +267,12 @@ def generate_data(test_loader,targeted,samples,start):
 
 	inputs=np.array(inputs)
 	targets=np.array(targets)
+	labels = np.array(labels)
 
 	print(inputs.shape)
 	print(targets.shape)
 
-	return inputs,targets
+	return inputs,targets,labels
 
 def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	r = []
@@ -300,23 +313,32 @@ def main():
 	#start is a offset to start taking sample from test set
 	#samples is the how many samples to take in total : for targeted, 1 means all 9 class target -> 9 total samples whereas for untargeted the original data 
 	#sample is taken i.e. 1 sample only 
-	inputs, targets = generate_data(test_loader,targeted,samples=5,start=0)
+	inputs, targets, labels = generate_data(test_loader,targeted,samples=5,start=0)
 
 	timestart = time.time()
 	adv = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
+	#FIXME
+	#adv = inputs
 
 	timeend = time.time()
 	print("Took",(timeend-timestart)/60.0,"mins to run",len(inputs),"samples.")
 
+	#for i in range(len(inputs)):
+		#input_ = (inputs[i]+0.5).transpose(1, 2, 0)
+		#data = transform_(input_).to(device)
+		#data = data.unsqueeze(0)  # Add batch dimension
+		#print(np.argmax(model(data).detach().cpu().numpy(), -1))
+
 	if use_log:
-		valid_class = np.argmax(F.softmax(model(torch.from_numpy(inputs).cuda()),-1).detach().cpu().numpy(),-1)
-		adv_class = np.argmax(F.softmax(model(torch.from_numpy(adv).cuda()),-1).detach().cpu().numpy(),-1)
+		valid_class = np.argmax(F.softmax(model(normalize(torch.from_numpy(inputs).cuda() +0.5)),-1).detach().cpu().numpy(),-1)
+		adv_class = np.argmax(F.softmax(model(normalize(torch.from_numpy(adv).cuda() +0.5)),-1).detach().cpu().numpy(),-1)
 
 	else:
-		valid_class = np.argmax(model(torch.from_numpy(inputs).cuda()).detach().cpu().numpy(),-1)
-		adv_class = np.argmax(model(torch.from_numpy(adv).cuda()).detach().cpu().numpy(),-1)
+		valid_class = np.argmax(model(normalize(torch.from_numpy(inputs).cuda() +0.5)).detach().cpu().numpy(),-1)
+		adv_class = np.argmax(model(normalize(torch.from_numpy(adv).cuda() +0.5)).detach().cpu().numpy(),-1)
 		
 	acc = ((valid_class==adv_class).sum())/len(inputs)
+	print("Targets: ", labels)
 	print("Valid Classification: ", valid_class)
 	print("Adversarial Classification: ", adv_class)
 	print("Success Rate: ", (1.0-acc)*100.0)
@@ -362,6 +384,7 @@ def main():
 		plt.title("{}->{}".format(classes[valid_class[i]],classes[adv_class[i]]))
 		plt.imshow(((adv[i]+0.5)).transpose(1,2,0))
 	plt.tight_layout()
+	plt.show()
 	if targeted:
 		if solver=="newton":
 			plt.savefig('newton_targeted_cifar10.png')
