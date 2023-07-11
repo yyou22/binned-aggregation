@@ -143,6 +143,8 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 	out_bestl2=1e10
 	out_bestscore=-1
 	
+	recent_attack=input.clone().detach().cpu().numpy()
+	recent_score=-1
 
 	if use_tanh:
 		input = torch.atanh(input*1.99999)
@@ -236,6 +238,9 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 				out_bestscore = np.argmax(scores[0])
 				out_best_attack = pert_images[0]
 				out_best_const = const
+
+			recent_attack = pert_images[0]
+			recent_score = np.argmax(scores[0])
 	
 		if compare(bestscore,  np.argmax(target.cpu().numpy(),-1)) and bestscore != -1:
 			print('old constant: ', const)
@@ -251,8 +256,11 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 			else:
 					const *= 10
 			print('new constant: ', const)
-
-	return out_best_attack, out_bestscore
+	
+	if out_bestl2 == 1e10:
+		return recent_attack, recent_score
+	else:
+		return out_best_attack, out_bestscore
 
 def generate_data(test_loader,targeted,samples,start):
 	inputs=[]
@@ -371,6 +379,9 @@ def main():
 	print("Adversarial Classification: ", adv_class)
 	print("Success Rate: ", (1.0-acc)*100.0)
 	print("Total distortion: ", np.sum((adv-inputs)**2)**.5)
+	
+	distortions = np.max(np.abs(adv - inputs), axis=(1,2,3))
+	print("Maximum distortions per image: ", distortions)
 
 	# for saving the mnist samples
 	# for i in range(len(inputs)):
@@ -401,25 +412,31 @@ def main():
 		#   plt.savefig('adam_untargeted_mnist.png') 
 
 	#visualization of created cifar10 adv examples 
-	classes = ('plane', 'car', 'bird', 'cat', 'deer','dog', 'frog', 'horse', 'ship', 'truck')
+	classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
 	cnt=0
-	plt.figure(figsize=(10,10))
+	num_images = len(inputs) + len(adv) # total number of images
+	num_rows = math.ceil(num_images / 5) # calculate number of rows based on 5 images per row
+
+	plt.figure(figsize=(20, 4 * num_rows)) # adjust the figure size
+
 	#display natural images
 	for i in range(len(inputs)):
 		cnt+=1
-		plt.subplot(10,10,cnt)
+		plt.subplot(num_rows, 5, cnt) # replace 10,10 with num_rows,5
 		plt.xticks([], [])
 		plt.yticks([], [])
 		plt.title("{}->{}".format(classes[valid_class[i]],classes[adv_class[i]]))
 		plt.imshow(((inputs[i]+0.5)).transpose(1,2,0))
+
 	#display adversarial images
 	for i in range(len(adv)):
 		cnt+=1
-		plt.subplot(10,10,cnt)
+		plt.subplot(num_rows, 5, cnt) # replace 10,10 with num_rows,5
 		plt.xticks([], [])
 		plt.yticks([], [])
 		plt.title("{}->{}".format(classes[valid_class[i]],classes[adv_class[i]]))
 		plt.imshow(((adv[i]+0.5)).transpose(1,2,0))
+		
 	plt.tight_layout()
 	plt.show()
 	if targeted:
