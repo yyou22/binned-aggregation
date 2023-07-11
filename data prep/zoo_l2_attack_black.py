@@ -36,6 +36,9 @@ transform_ = transforms.Compose(
 			]
 		)
 
+epsilon = 0.03
+samples = 5
+
 """##L2 Black Box Attack"""
 
 @jit(nopython=True)
@@ -116,7 +119,7 @@ def loss_run(input,target,model,modifier,use_tanh,use_log,targeted,confidence,co
 
 def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_adam_after_found=True,abort_early=True,
 							batch_size=128,max_iter=1000,const=0.01,confidence=0.0,early_stop_iters=100, binary_search_steps=9,
-							step_size=0.01,adam_beta1=0.9,adam_beta2=0.999):
+							step_size=0.01,adam_beta1=0.9,adam_beta2=0.999): #FIXME
 	
 	early_stop_iters = early_stop_iters if early_stop_iters != 0 else max_iter // 10
 
@@ -191,7 +194,21 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 				coordinate_ADAM(losses,indice,grad,hess,batch_size,mt,vt,real_modifier_numpy,adam_epoch,modifier_up,modifier_down,step_size,adam_beta1,adam_beta2,proj=not use_tanh)
 			if solver=="newton":
 				coordinate_Newton(losses,indice,grad,hess,batch_size,mt,vt,real_modifier_numpy,adam_epoch,modifier_up,modifier_down,step_size,adam_beta1,adam_beta2,proj=not use_tanh)
-			real_modifier=torch.from_numpy(real_modifier_numpy).cuda()
+			
+			real_modifier = torch.from_numpy(real_modifier_numpy).cuda()
+
+			real_modifier = torch.clamp(real_modifier, -epsilon, epsilon)
+
+			#print(real_modifier.shape)
+			#clipping perturbation based on upper bound
+			#m_norm = np.linalg.norm(real_modifier_numpy)
+			#print('l2 norm: ' + str(m_norm))
+			#if m_norm > max_perturbation:
+				#real_modifier_numpy = (real_modifier_numpy / m_norm) * max_perturbation
+				# Convert the adjusted numpy array back to torch tensor
+				#real_modifier = torch.from_numpy(real_modifier_numpy).cuda()
+				#print(real_modifier.shape) #1,3,32,32
+				#print(real_modifier_numpy.shape) #1,3,32,32
 			
 			if losses2[0]==0.0 and last_loss2!=0.0 and stage==0:
 				if reset_adam_after_found:
@@ -282,8 +299,16 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	for i in range(len(inputs)):
 		print('tick',i+1)
 		attack,score=l2_attack(np.expand_dims(inputs[i],0), np.expand_dims(targets[i],0), model, targeted, use_log, use_tanh, solver, device)
+		attack = attack.reshape(3, 32, 32)
+		print('attack shape')
+		print(attack.shape)
 		r.append(attack)
-	return np.array(r)
+		print('r length')
+		print(len(r))
+	r_ = np.array(r)
+	print('r_ shape')
+	print(r_.shape)
+	return r_
 
 def main():
 	np.random.seed(42)
@@ -313,10 +338,13 @@ def main():
 	#start is a offset to start taking sample from test set
 	#samples is the how many samples to take in total : for targeted, 1 means all 9 class target -> 9 total samples whereas for untargeted the original data 
 	#sample is taken i.e. 1 sample only 
-	inputs, targets, labels = generate_data(test_loader,targeted,samples=5,start=0)
+	inputs, targets, labels = generate_data(test_loader,targeted,samples=samples,start=0)
 
 	timestart = time.time()
 	adv = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
+	print("adv shape")
+	print(adv.shape)
+	#adv = adv.reshape(samples, 3, 32, 32)
 	#FIXME
 	#adv = inputs
 
@@ -376,6 +404,15 @@ def main():
 	classes = ('plane', 'car', 'bird', 'cat', 'deer','dog', 'frog', 'horse', 'ship', 'truck')
 	cnt=0
 	plt.figure(figsize=(10,10))
+	#display natural images
+	for i in range(len(inputs)):
+		cnt+=1
+		plt.subplot(10,10,cnt)
+		plt.xticks([], [])
+		plt.yticks([], [])
+		plt.title("{}->{}".format(classes[valid_class[i]],classes[adv_class[i]]))
+		plt.imshow(((inputs[i]+0.5)).transpose(1,2,0))
+	#display adversarial images
 	for i in range(len(adv)):
 		cnt+=1
 		plt.subplot(10,10,cnt)
