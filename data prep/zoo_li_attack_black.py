@@ -10,8 +10,6 @@ import scipy.misc
 import os
 import sys
 from PIL import Image
-#from setup_mnist_model import MNIST
-#from setup_cifar10_model import CIFAR10
 
 from models.resnet import *
 from cifar10_models.vgg import vgg16_bn, vgg19_bn
@@ -36,10 +34,10 @@ transform_ = transforms.Compose(
 			]
 		)
 
-epsilon = 0.3
+epsilon = 0.03
 samples = 5
 
-"""##L2 Black Box Attack"""
+"""##Li Black Box Attack"""
 
 @jit(nopython=True)
 def coordinate_ADAM(losses, indice, grad, hess, batch_size, mt_arr, vt_arr, real_modifier, adam_epoch, up, down, step_size,beta1, beta2, proj):
@@ -93,9 +91,11 @@ def loss_run(input,target,model,modifier,use_tanh,use_log,targeted,confidence,co
 		output = F.softmax(output,-1)
 	
 	if use_tanh:
-		loss1 = torch.sum(torch.square(pert_out-torch.tanh(input)/2),dim=(1,2,3))
+		loss1 = torch.sum(torch.clamp(torch.abs(pert_out - torch.tanh(input) / 2) - tau, min=0.0))
+		#loss1 = torch.sum(torch.square(pert_out-torch.tanh(input)/2),dim=(1,2,3))
 	else:
-		loss1 = torch.sum(torch.square(pert_out-input),dim=(1,2,3))
+		loss1 = torch.sum(torch.clamp(torch.abs(pert_out - input) - tau, min=0.0))
+		#loss1 = torch.sum(torch.square(pert_out-input),dim=(1,2,3))
 
 	real = torch.sum(target*output,-1)
 	other = torch.max((1-target)*output-(target*10000),-1)[0]
@@ -199,22 +199,7 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 			
 			real_modifier = torch.from_numpy(real_modifier_numpy).cuda()
 
-			#real_modifier = torch.clamp(real_modifier, -epsilon, epsilon)
-			l2_norm = torch.sum(torch.square(real_modifier),dim=(1,2,3))
-			#print(l2_norm)
-			if l2_norm > epsilon:
-				real_modifier = epsilon * real_modifier / l2_norm
-
-			#print(real_modifier.shape)
-			#clipping perturbation based on upper bound
-			#m_norm = np.linalg.norm(real_modifier_numpy)
-			#print('l2 norm: ' + str(m_norm))
-			#if m_norm > max_perturbation:
-				#real_modifier_numpy = (real_modifier_numpy / m_norm) * max_perturbation
-				# Convert the adjusted numpy array back to torch tensor
-				#real_modifier = torch.from_numpy(real_modifier_numpy).cuda()
-				#print(real_modifier.shape) #1,3,32,32
-				#print(real_modifier_numpy.shape) #1,3,32,32
+			real_modifier = torch.clamp(real_modifier, -epsilon, epsilon)
 			
 			if losses2[0]==0.0 and last_loss2!=0.0 and stage==0:
 				if reset_adam_after_found:
@@ -344,10 +329,9 @@ def main():
 	model.eval()
 
 	use_log=True
-	use_tanh=False #FIXME
+	use_tanh=True
 	targeted=False
-	#solver="newton"
-	solver="adam"
+	solver="newton"
 	#start is a offset to start taking sample from test set
 	#samples is the how many samples to take in total : for targeted, 1 means all 9 class target -> 9 total samples whereas for untargeted the original data 
 	#sample is taken i.e. 1 sample only 
@@ -387,34 +371,6 @@ def main():
 	
 	distortions = np.max(np.abs(adv - inputs), axis=(1,2,3))
 	print("Maximum distortions per image: ", distortions)
-
-	# for saving the mnist samples
-	# for i in range(len(inputs)):
-	#   save(inputs[i], "original_"+str(i)+".png")
-	#   save(adv[i], "adversarial_"+str(i)+".png")
-	#   save(adv[i] - inputs[i], "diff_"+str(i)+".png")
-
-	#visualization of created mnist adv examples 
-	# cnt=0
-	# plt.figure(figsize=(10,10))
-	# for i in range(len(adv)):
-	#   cnt+=1
-	#   plt.subplot(10,10,cnt)
-	#   plt.xticks([], [])
-	#   plt.yticks([], [])
-	#   plt.title("{} -> {}".format(valid_class[i],adv_class[i]))
-	#   plt.imshow(adv[i].reshape(28,28), cmap="gray")
-	# plt.tight_layout()
-	# if targeted:
-	#   if solver=="newton":
-	#     plt.savefig('newton_targeted_mnist.png')
-	#   else:
-	#     plt.savefig('adam_targeted_mnist.png') 
-	# else:
-	#   if solver=="newton":
-		#   plt.savefig('newton_untargeted_mnist.png')
-		# else:
-		#   plt.savefig('adam_untargeted_mnist.png') 
 
 	#visualization of created cifar10 adv examples 
 	classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
