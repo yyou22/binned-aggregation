@@ -148,9 +148,9 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 	early_stop_iters = early_stop_iters if early_stop_iters != 0 else max_iter // 10
 
 	input = torch.from_numpy(input).cuda()
-	input = input.float().contiguous()
+	input = input.contiguous()
 	target = torch.from_numpy(target).cuda()
-	target = target.float()
+	target = target
 	
 	var_len = input.view(-1).size()[0]
 	modifier_up = np.zeros(var_len, dtype=np.float32)
@@ -330,7 +330,11 @@ def generate_data(test_loader,targeted,samples,start):
 	return inputs,targets,labels
 
 def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
+	adv_examples = []
+	noise = []
+
 	r = []
+
 	print(len(inputs))
 	print('go up to',len(inputs))
 	# run 1 image at a time, minibatches used for gradient evaluation
@@ -343,10 +347,13 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 		r.append(attack)
 		print('r length')
 		print(len(r))
+		#append adv_examples
+		adv_examples.append((attack+0.5).transpose(1 , 2 , 0))
+		noise.append((attack-inputs[i]).transpose(1 , 2 , 0))
 	r_ = np.array(r)
 	print('r_ shape')
 	print(r_.shape)
-	return r_
+	return r_, adv_examples, noise
 
 def attack_main(model, X_data, Y_data, epsilon_):
 	np.random.seed(42)
@@ -384,16 +391,16 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	X_data = X_data.transpose(0, 3, 1, 2)
 	X_data = (X_data - 0.5)
 
-	inputs = X_data[:1]
-	labels = Y_data[:1]
-	targets = np.eye(10)[Y_data.flatten()][:1]
+	inputs = X_data[:samples]
+	labels = Y_data[:samples]
+	targets = np.eye(10)[Y_data.flatten().astype(int)][:samples]
 
 	print(inputs.shape)
 	print(targets.shape)
 	print(labels.shape)
 
 	timestart = time.time()
-	adv = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
+	adv, adv_examples, noise = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
 	print("adv shape")
 	print(adv.shape)
 	#adv = adv.reshape(samples, 3, 32, 32)
@@ -410,14 +417,20 @@ def attack_main(model, X_data, Y_data, epsilon_):
 		#print(np.argmax(model(data).detach().cpu().numpy(), -1))
 
 	if use_log:
+		confid_level = F.softmax(model(normalize(torch.from_numpy(adv).cuda() +0.5)),-1).detach().cpu().numpy()
 		valid_class = np.argmax(F.softmax(model(normalize(torch.from_numpy(inputs).cuda() +0.5)),-1).detach().cpu().numpy(),-1)
 		adv_class = np.argmax(F.softmax(model(normalize(torch.from_numpy(adv).cuda() +0.5)),-1).detach().cpu().numpy(),-1)
 
 	else:
+		confid_level = F.softmax(model(normalize(torch.from_numpy(adv).cuda() +0.5)),-1).detach().cpu().numpy()
 		valid_class = np.argmax(model(normalize(torch.from_numpy(inputs).cuda() +0.5)).detach().cpu().numpy(),-1)
 		adv_class = np.argmax(model(normalize(torch.from_numpy(adv).cuda() +0.5)).detach().cpu().numpy(),-1)
+
+	#print("confid level")
+	#print(confid_level)
 		
 	acc = ((valid_class==adv_class).sum())/len(inputs)
+	wrong = (valid_class==adv_class).sum()
 	print("Targets: ", labels)
 	print("Valid Classification: ", valid_class)
 	print("Adversarial Classification: ", adv_class)
@@ -426,6 +439,31 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	
 	distortions = np.max(np.abs(adv - inputs), axis=(1,2,3))
 	print("Maximum distortions per image: ", distortions)
+
+	path = '../data/ZOO/' + args.model + '/' + ''.join(str(epsilon).split('.'))
+
+	if not os.path.exists(path):
+		os.makedirs(path)
+
+	adv_examples = np.array(adv_examples)
+	confid_level = np.array(confid_level)
+	noise = np.array(noise)
+
+	np.save(path + '/adv_X.npy', adv_examples)
+	np.save(path + '/Y_hat.npy', adv_class)
+	np.save(path + '/confid_level.npy', confid_level)
+	np.save(path + '/noise.npy', noise)
+
+	print('adv_examples')
+	print(adv_examples.shape)
+	print('adv_class')
+	print(adv_class.shape)
+	print('noise')
+	print(noise.shape)
+
+	f = open(path + '/error.pckl', 'wb')
+	pickle.dump(wrong, f)
+	f.close()
 
 	#visualization of created cifar10 adv examples 
 	classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -478,13 +516,10 @@ def main():
 		model = ResNet34().to(device)
 		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
 
-	X_data = np.load("/content/data/ZOO/X.npy")
-	Y_data = np.load("/content/data/ZOO/Y.npy")
+	X_data = np.load("/content/data/ZOO/X.npy").astype(np.float32)
+	Y_data = np.load("/content/data/ZOO/Y.npy").astype(np.float32)
 
-	if args.natural:
-		natural(model, X_data, Y_data, epsilon)
-	else:
-		attack_main(model, X_data, Y_data, epsilon)
+	attack_main(model, X_data, Y_data, epsilon)
 
 if __name__ == "__main__":
 	main()
