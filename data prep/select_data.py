@@ -59,12 +59,16 @@ def select_data():
 	data = data/255.0
 	label = np.array(label)
 
-	path = "../data"
-	if not os.path.exists(path):
-		os.makedirs(path)
+	#path = "../data"
+	#if not os.path.exists(path):
+		#os.makedirs(path)
 
 	#np.save('../data/ZOO/X.npy', data)
 	#np.save('../data/ZOO/Y.npy', label)
+
+	path = "/content/data/ZOO"
+	if not os.path.exists(path):
+		os.makedirs(path)
 
 	np.save('/content/data/ZOO/X.npy', data)
 	np.save('/content/data/ZOO/Y.npy', label)
