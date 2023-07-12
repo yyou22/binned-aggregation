@@ -63,8 +63,8 @@ def select_data():
 	if not os.path.exists(path):
 		os.makedirs(path)
 
-	np.save('../data/X.npy', data)
-	np.save('../data/Y.npy', label)
+	np.save('../data/ZOO/X.npy', data)
+	np.save('../data/ZOO/Y.npy', label)
 
 def main():
 
