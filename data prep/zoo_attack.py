@@ -148,7 +148,9 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 	early_stop_iters = early_stop_iters if early_stop_iters != 0 else max_iter // 10
 
 	input = torch.from_numpy(input).cuda()
+	input = input.float().contiguous()
 	target = torch.from_numpy(target).cuda()
+	target = target.float()
 	
 	var_len = input.view(-1).size()[0]
 	modifier_up = np.zeros(var_len, dtype=np.float32)
@@ -354,8 +356,8 @@ def attack_main(model, X_data, Y_data, epsilon_):
 
 	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (1.0,))])
 	# test_set = datasets.MNIST(root = './data', train=False, transform = transform, download=True)
-	test_set = datasets.CIFAR10(root = './data', train=False, transform = transform, download=True)
-	test_loader = torch.utils.data.DataLoader(test_set,batch_size=1,shuffle=True)
+	#test_set = datasets.CIFAR10(root = './data', train=False, transform = transform, download=True)
+	#test_loader = torch.utils.data.DataLoader(test_set,batch_size=1,shuffle=True)
 
 	use_cuda=True
 	device = torch.device("cuda" if (use_cuda and torch.cuda.is_available()) else "cpu")
@@ -379,11 +381,12 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	#sample is taken i.e. 1 sample only 
 	#inputs, targets, labels = generate_data(test_loader,targeted,samples=samples,start=0)
 
-	print('here')
+	X_data = X_data.transpose(0, 3, 1, 2)
+	X_data = (X_data - 0.5)
 
-	inputs = X_data[:5]
-	labels = Y_data[:5]
-	targets = np.eye(10)[Y_data.flatten()][:5]
+	inputs = X_data[:1]
+	labels = Y_data[:1]
+	targets = np.eye(10)[Y_data.flatten()][:1]
 
 	print(inputs.shape)
 	print(targets.shape)
