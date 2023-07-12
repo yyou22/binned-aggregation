@@ -322,9 +322,11 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	print(r_.shape)
 	return r_
 
-def main():
+def attack(model, X_data, Y_data, epsilon_):
 	np.random.seed(42)
 	torch.manual_seed(42)
+
+	epsilon = epsilon_
 
 	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (1.0,))])
 	# test_set = datasets.MNIST(root = './data', train=False, transform = transform, download=True)
@@ -337,7 +339,7 @@ def main():
 	# model = MNIST().to(device)
 	#model = CIFAR10().to(device) 
 
-	model = vgg16_bn(pretrained=True).to(device)
+	#model = vgg16_bn(pretrained=True).to(device)
 
 	# model.load_state_dict(torch.load('./models/mnist_model.pt'))
 	# model.load_state_dict(torch.load('./models/cifar10_model.pt'))
@@ -351,7 +353,11 @@ def main():
 	#start is a offset to start taking sample from test set
 	#samples is the how many samples to take in total : for targeted, 1 means all 9 class target -> 9 total samples whereas for untargeted the original data 
 	#sample is taken i.e. 1 sample only 
-	inputs, targets, labels = generate_data(test_loader,targeted,samples=samples,start=0)
+	#inputs, targets, labels = generate_data(test_loader,targeted,samples=samples,start=0)
+
+	inputs = X_data[:5]
+	labels = Y_data[:5]
+	targets = np.eye(10)[Y_data.flatten()][:5]
 
 	timestart = time.time()
 	adv = attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device)
@@ -387,34 +393,6 @@ def main():
 	
 	distortions = np.max(np.abs(adv - inputs), axis=(1,2,3))
 	print("Maximum distortions per image: ", distortions)
-
-	# for saving the mnist samples
-	# for i in range(len(inputs)):
-	#   save(inputs[i], "original_"+str(i)+".png")
-	#   save(adv[i], "adversarial_"+str(i)+".png")
-	#   save(adv[i] - inputs[i], "diff_"+str(i)+".png")
-
-	#visualization of created mnist adv examples 
-	# cnt=0
-	# plt.figure(figsize=(10,10))
-	# for i in range(len(adv)):
-	#   cnt+=1
-	#   plt.subplot(10,10,cnt)
-	#   plt.xticks([], [])
-	#   plt.yticks([], [])
-	#   plt.title("{} -> {}".format(valid_class[i],adv_class[i]))
-	#   plt.imshow(adv[i].reshape(28,28), cmap="gray")
-	# plt.tight_layout()
-	# if targeted:
-	#   if solver=="newton":
-	#     plt.savefig('newton_targeted_mnist.png')
-	#   else:
-	#     plt.savefig('adam_targeted_mnist.png') 
-	# else:
-	#   if solver=="newton":
-		#   plt.savefig('newton_untargeted_mnist.png')
-		# else:
-		#   plt.savefig('adam_untargeted_mnist.png') 
 
 	#visualization of created cifar10 adv examples 
 	classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -455,8 +433,8 @@ def main():
 		else:
 			plt.savefig('adam_untargeted_cifar10.png') 
 
-if __name__=='__main__':
+#if __name__=='__main__':
 
-	main()
+	#attack()
 
 	
