@@ -56,7 +56,7 @@ transform_ = transforms.Compose(
 		)
 
 epsilon = 0.3
-samples = 5
+samples = 100
 
 # settings
 use_cuda = not args.no_cuda and torch.cuda.is_available()
@@ -141,7 +141,7 @@ def loss_run(input,target,model,modifier,use_tanh,use_log,targeted,confidence,co
 	
 	return loss.detach().cpu().numpy(), l2.detach().cpu().numpy(), loss2.detach().cpu().numpy(), output.detach().cpu().numpy(), pert_out.detach().cpu().numpy()
 
-def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_adam_after_found=True,abort_early=True,
+def l2_attack(cur_class, input, target, model, targeted, use_log, use_tanh, solver, reset_adam_after_found=True,abort_early=True,
 							batch_size=128,max_iter=1000,const=0.01,confidence=0.0,early_stop_iters=100, binary_search_steps=9,
 							step_size=0.01,adam_beta1=0.9,adam_beta2=0.999): #FIXME
 	
@@ -260,7 +260,9 @@ def l2_attack(input, target, model, targeted, use_log, use_tanh, solver, reset_a
 				bestl2 = l2s[0]
 				bestscore = np.argmax(scores[0])
 
-			if l2s[0] < out_bestl2 and compare(scores[0],np.argmax(target.cpu().numpy(),-1)):
+			if l2s[0] < out_bestl2 and compare(scores[0],np.argmax(target.cpu().numpy(),-1)) and compare(scores[0],cur_class[0]):
+				#print(np.argmax(scores[0]))
+				#print(cur_class[0])
 				if out_bestl2 == 1e10:
 					print("[STATS][L3](First valid attack found!) iter = {}, loss = {:.5f}, loss1 = {:.5f}, loss2 = {:.5f}".format(iter+1, losses[0], l2s[0], losses2[0]))
 					sys.stdout.flush()
@@ -340,7 +342,12 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	# run 1 image at a time, minibatches used for gradient evaluation
 	for i in range(len(inputs)):
 		print('tick',i+1)
-		attack,score=l2_attack(np.expand_dims(inputs[i],0), np.expand_dims(targets[i],0), model, targeted, use_log, use_tanh, solver, device)
+
+		input_ = np.array(np.expand_dims(inputs[i], axis=0), dtype=np.float32)
+		cur_class = np.argmax(F.softmax(model(normalize(torch.from_numpy(input_).cuda() +0.5)),-1).detach().cpu().numpy(),-1)
+		print(cur_class)
+
+		attack,score=l2_attack(cur_class, np.expand_dims(inputs[i],0), np.expand_dims(targets[i],0), model, targeted, use_log, use_tanh, solver, device)
 		attack = attack.reshape(3, 32, 32)
 		print('attack shape')
 		print(attack.shape)
@@ -404,7 +411,6 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	print("adv shape")
 	print(adv.shape)
 	#adv = adv.reshape(samples, 3, 32, 32)
-	#FIXME
 	#adv = inputs
 
 	timeend = time.time()

@@ -41,8 +41,8 @@ def main():
 	X_data_list = []
 	Y_hat_list = []
 
-	for i in range(3, 4):
-		path = '../data/ZOO/' + args.model + '/00'  + str(i) + '/'
+	for i in range(0, 4):
+		path = '../data/ZOO/' + args.model + '/0'  + str(i) + '/'
 
 		path_x = path + 'features.npy'
 		X_data_list.append(np.load(path_x, allow_pickle=True))
@@ -77,9 +77,9 @@ def main():
 
 	type_ = ['%.5f'] * 14 + ['%d'] * 2
 
-	for i in range(3, 4): #FIXME
+	for i in range(0, 4):
 
-		path = '../data/ZOO/' + args.model + '/00'  + str(i) + '/'
+		path = '../data/ZOO/' + args.model + '/0'  + str(i) + '/'
 
 		confid_level = np.load(path + '/confid_level.npy')
 
