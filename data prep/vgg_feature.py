@@ -47,6 +47,8 @@ def feature_(model, X_data):
 
 		x_data_ = X_data[idx]#.transpose(1 , 2 , 0)
 
+		#print(x_data_.shape)
+
 		x_data = transform_(x_data_)
 		x_data = x_data.numpy()
 

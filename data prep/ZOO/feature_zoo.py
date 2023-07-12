@@ -38,6 +38,8 @@ inv_std = [1/0.2471, 1/0.2435, 1/0.2616]
 
 epsilon = args.epsilon
 
+start_idx = 0
+
 # settings
 use_cuda = not args.no_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
@@ -48,26 +50,34 @@ transform_test = transforms.Compose([transforms.ToTensor(),])
 testset = torchvision.datasets.CIFAR10(root='/content/data', train=False, download=True, transform=transform_test)
 test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
-def feature_(model, test_loader):
+def feature_(model, X_data):
 
 	model.eval()
 
-	normalize = T.Normalize(mean, std)
+	transform_ = T.Compose(
+			[
+				T.ToTensor(),
+				T.Normalize(mean, std),
+			]
+		)
 
 	features = []
 
-	for data, target in test_loader:
+	for idx in range(start_idx, X_data.shape[0]):
 
-		data, target = data.to(device), target.to(device)
+		x_data_ = X_data[idx].transpose(1 , 2 , 0)
 
-		data = normalize(data)
+		x_data = transform_(x_data_)
+		x_data = x_data.numpy()
 
-		X, y = Variable(data, requires_grad = True), Variable(target)
+		# load image
+		image = np.array(np.expand_dims(x_data, axis=0), dtype=np.float32)
+		data = torch.from_numpy(image).to(device)
+		X = Variable(data)
 
-		# output of model
 		out = model(X)
 
-		features.extend(out.cpu().detach().numpy())
+		features.append(out[0].cpu().detach().numpy())
 
 	path = '../data/ZOO/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
 
@@ -95,12 +105,12 @@ def main():
 	path = '../data/ZOO/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
 	X_data = np.load(path + '/adv_X.npy').transpose(0,3,1,2)
 
-	tensor_x = torch.Tensor(X_data)
-	tensor_y = torch.Tensor(testset.targets)
+	#tensor_x = torch.Tensor(X_data)
+	#tensor_y = torch.Tensor(testset.targets)
 
-	my_dataset = TensorDataset(tensor_x,tensor_y) # create datset
-	my_dataloader = DataLoader(my_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs) # create dataloader
-	feature_(model, my_dataloader)
+	#my_dataset = TensorDataset(tensor_x,tensor_y) # create datset
+	#my_dataloader = DataLoader(my_dataset, batch_size=args.test_batch_size, shuffle=False, **kwargs) # create dataloader
+	feature_(model, X_data)
 
 if __name__ == "__main__":
 	main()
