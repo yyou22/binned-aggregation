@@ -31,6 +31,11 @@ inv_std = [1/0.2471, 1/0.2435, 1/0.2616]
 
 epsilon = args.epsilon
 
+# settings
+use_cuda = not args.no_cuda and torch.cuda.is_available()
+device = torch.device("cuda" if use_cuda else "cpu")
+kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+
 def main():
 
 	if args.model == "vgg16":
