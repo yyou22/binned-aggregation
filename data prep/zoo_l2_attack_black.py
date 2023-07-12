@@ -322,7 +322,7 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	print(r_.shape)
 	return r_
 
-def attack(model, X_data, Y_data, epsilon_):
+def attack_main(model, X_data, Y_data, epsilon_):
 	np.random.seed(42)
 	torch.manual_seed(42)
 

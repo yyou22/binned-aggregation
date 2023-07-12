@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import argparse
 import os
 import pickle
-from zoo_l2_attack_black import attack
+from zoo_l2_attack_black import attack_main
 
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
@@ -56,7 +56,7 @@ def main():
 	if args.natural:
 		natural(model, X_data, Y_data, epsilon)
 	else:
-		attack(model, X_data, Y_data, epsilon)
+		attack_main(model, X_data, Y_data, epsilon)
 
 if __name__ == "__main__":
 	main()
