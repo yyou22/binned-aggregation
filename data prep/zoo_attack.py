@@ -55,7 +55,7 @@ transform_ = transforms.Compose(
 			]
 		)
 
-epsilon = 0.3
+epsilon = 0.5
 samples = 100
 
 # settings
