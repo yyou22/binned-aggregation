@@ -30,7 +30,7 @@ from cifar10_models.resnet import resnet18, resnet34
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
 parser.add_argument('--epsilon', default=0.3, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
-parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19|resnet|trades], model that is being attacked')
+parser.add_argument('--model', default='vgg19', help='[vgg16|vgg19|resnet|trades], model that is being attacked')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 
@@ -142,8 +142,8 @@ def loss_run(input,target,model,modifier,use_tanh,use_log,targeted,confidence,co
 	return loss.detach().cpu().numpy(), l2.detach().cpu().numpy(), loss2.detach().cpu().numpy(), output.detach().cpu().numpy(), pert_out.detach().cpu().numpy()
 
 def l2_attack(cur_class, input, target, model, targeted, use_log, use_tanh, solver, reset_adam_after_found=True,abort_early=True,
-							batch_size=128,max_iter=1000,const=0.01,confidence=0.0,early_stop_iters=100, binary_search_steps=9,
-							step_size=0.01,adam_beta1=0.9,adam_beta2=0.999): #FIXME
+							batch_size=128,max_iter=2000,const=0.01,confidence=0.0,early_stop_iters=200, binary_search_steps=10,
+							step_size=0.005,adam_beta1=0.9,adam_beta2=0.999): #FIXME
 	
 	early_stop_iters = early_stop_iters if early_stop_iters != 0 else max_iter // 10
 
@@ -368,7 +368,7 @@ def attack_main(model, X_data, Y_data, epsilon_):
 
 	epsilon = epsilon_
 
-	transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (1.0,))])
+	#transform = transforms.Compose([transforms.ToTensor(), transforms.Normalize((0.5,), (1.0,))])
 	# test_set = datasets.MNIST(root = './data', train=False, transform = transform, download=True)
 	#test_set = datasets.CIFAR10(root = './data', train=False, transform = transform, download=True)
 	#test_loader = torch.utils.data.DataLoader(test_set,batch_size=1,shuffle=True)
@@ -443,8 +443,13 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	print("Success Rate: ", (1.0-acc)*100.0)
 	print("Total distortion: ", np.sum((adv-inputs)**2)**.5)
 	
-	distortions = np.max(np.abs(adv - inputs), axis=(1,2,3))
-	print("Maximum distortions per image: ", distortions)
+	#distortions = np.max(np.abs(adv - inputs), axis=(1,2,3))
+	#print("Maximum distortions per image: ", distortions)
+
+	distortions = np.sqrt(np.sum((adv - inputs)**2, axis=(1, 2, 3)))
+	average_l2_norm = np.mean(distortions)
+	print("Average distortion: ", average_l2_norm)
+
 
 	path = '../data/ZOO/' + args.model + '/' + ''.join(str(epsilon).split('.'))
 
@@ -470,6 +475,8 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	f = open(path + '/error.pckl', 'wb')
 	pickle.dump(wrong, f)
 	f.close()
+
+	return
 
 	#visualization of created cifar10 adv examples 
 	classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -515,6 +522,7 @@ def main():
 	if args.model == "vgg16":
 		model = vgg16_bn(pretrained=True).to(device)
 	elif args.model == "vgg19":
+		print("vgg19")
 		model = vgg19_bn(pretrained=True).to(device)
 	if args.model == "resnet":
 		model = resnet34(pretrained=True).to(device)
