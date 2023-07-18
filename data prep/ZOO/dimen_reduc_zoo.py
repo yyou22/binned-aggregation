@@ -16,7 +16,7 @@ parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19], model that 
 args = parser.parse_args()
 
 # set up data loader
-testset = torchvision.datasets.CIFAR10(root='/content/data', train=False, download=True)
+#testset = torchvision.datasets.CIFAR10(root='/content/data', train=False, download=True)
 
 def TSNE_(data):
 
@@ -34,15 +34,17 @@ def PCA_(data):
 
 def main():
 
-	#Y_data = np.load("../data/Y.npy")
-	Y_data = np.array(testset.targets)
+	Y_data = np.load("./data/Y.npy")
+	#Y_data = np.array(testset.targets)
 	Y_data = Y_data.reshape((Y_data.shape[0], 1))
 
 	X_data_list = []
 	Y_hat_list = []
 
+	idx_ = [0, 1, 3, 5]
+
 	for i in range(0, 4):
-		path = '../data/ZOO/' + args.model + '/0'  + str(i) + '/'
+		path = './data/' + args.model + '/0'  + str(idx_[i]) + '/'
 
 		path_x = path + 'features.npy'
 		X_data_list.append(np.load(path_x, allow_pickle=True))
@@ -59,7 +61,7 @@ def main():
 
 	X_data_t = TSNE_(X_data)
 
-	tx, ty = X_data_t[:, 0].reshape(10000*4, 1), X_data_t[:, 1].reshape(10000*4, 1) #change size
+	tx, ty = X_data_t[:, 0].reshape(100*4, 1), X_data_t[:, 1].reshape(100*4, 1) #change size
 	tx = (tx-np.min(tx)) / (np.max(tx) - np.min(tx))
 	ty = (ty-np.min(ty)) / (np.max(ty) - np.min(ty))
 
@@ -68,7 +70,7 @@ def main():
 
 	X_data_p = PCA_(X_data)
 
-	px, py = X_data_p[:, 0].reshape(10000*4, 1), X_data_p[:, 1].reshape(10000*4, 1) #change size
+	px, py = X_data_p[:, 0].reshape(100*4, 1), X_data_p[:, 1].reshape(100*4, 1) #change size
 	px = (px-np.min(px)) / (np.max(px) - np.min(px))
 	py = (py-np.min(py)) / (np.max(py) - np.min(py))
 
@@ -79,7 +81,7 @@ def main():
 
 	for i in range(0, 4):
 
-		path = '../data/ZOO/' + args.model + '/0'  + str(i) + '/'
+		path = './data/' + args.model + '/0'  + str(idx_[i]) + '/'
 
 		confid_level = np.load(path + '/confid_level.npy')
 

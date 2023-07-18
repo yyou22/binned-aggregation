@@ -40,15 +40,10 @@ epsilon = args.epsilon
 
 start_idx = 0
 
-# settings
-use_cuda = not args.no_cuda and torch.cuda.is_available()
-device = torch.device("cuda" if use_cuda else "cpu")
-kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
-
 # set up data loader
-transform_test = transforms.Compose([transforms.ToTensor(),])
-testset = torchvision.datasets.CIFAR10(root='/content/data', train=False, download=True, transform=transform_test)
-test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
+#transform_test = transforms.Compose([transforms.ToTensor(),])
+#testset = torchvision.datasets.CIFAR10(root='/content/data', train=False, download=True, transform=transform_test)
+#test_loader = torch.utils.data.DataLoader(testset, batch_size=args.test_batch_size, shuffle=False, **kwargs)
 
 def feature_(model, X_data):
 
@@ -65,21 +60,27 @@ def feature_(model, X_data):
 
 	for idx in range(start_idx, X_data.shape[0]):
 
-		x_data_ = X_data[idx].transpose(1 , 2 , 0)
+		if args.natural:
+			x_data_ = X_data[idx]
+		else:
+			x_data_ = X_data[idx].transpose(1 , 2 , 0)
 
 		x_data = transform_(x_data_)
 		x_data = x_data.numpy()
 
 		# load image
 		image = np.array(np.expand_dims(x_data, axis=0), dtype=np.float32)
-		data = torch.from_numpy(image).to(device)
+		data = torch.from_numpy(image)
 		X = Variable(data)
 
 		out = model(X)
 
-		features.append(out[0].cpu().detach().numpy())
+		features.append(out[0].detach().numpy())
 
-	path = '../data/ZOO/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
+	if args.natural:
+		path = './ZOO/data/' + args.model + '/00'
+	else:
+		path = './ZOO/data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
 
 	if not os.path.exists(path):
 		os.makedirs(path)
@@ -91,19 +92,23 @@ def feature_(model, X_data):
 def main():
 
 	if args.model == "vgg16":
-		model = vgg16_bn(pretrained=True).features.to(device)
+		model = vgg16_bn(pretrained=True).features
 	elif args.model == "vgg19":
-		model = vgg19_bn(pretrained=True).features.to(device)
+		model = vgg19_bn(pretrained=True).features
 	elif args.model == "resnet":
-		model = resnet34(pretrained=True).to(device)
+		model = resnet34(pretrained=True)
 		model = FeatureExtractor(model)
 	elif args.model == "TRADES":
-		model = ResNet34().to(device)
-		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
+		model = ResNet34()
+		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt"))
 		model = FeatureExtractor(model)
 
-	path = '../data/ZOO/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
-	X_data = np.load(path + '/adv_X.npy').transpose(0,3,1,2)
+	path = './ZOO/data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))
+
+	if args.natural:
+		X_data = np.load('./ZOO/data/X.npy')
+	else:
+		X_data = np.load(path + '/adv_X.npy').transpose(0,3,1,2)
 
 	#tensor_x = torch.Tensor(X_data)
 	#tensor_y = torch.Tensor(testset.targets)

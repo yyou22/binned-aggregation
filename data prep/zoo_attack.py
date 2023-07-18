@@ -30,7 +30,7 @@ from cifar10_models.resnet import resnet18, resnet34
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
 parser.add_argument('--epsilon', default=0.3, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
-parser.add_argument('--model', default='vgg19', help='[vgg16|vgg19|resnet|trades], model that is being attacked')
+parser.add_argument('--model', default='TRADES', help='[vgg16|vgg19|resnet|TRADES], model that is being attacked')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 
@@ -55,7 +55,7 @@ transform_ = transforms.Compose(
 			]
 		)
 
-epsilon = 0.5
+epsilon = 0.1
 samples = 100
 
 # settings
@@ -520,13 +520,16 @@ def attack_main(model, X_data, Y_data, epsilon_):
 def main():
 
 	if args.model == "vgg16":
+		print("vgg16")
 		model = vgg16_bn(pretrained=True).to(device)
 	elif args.model == "vgg19":
 		print("vgg19")
 		model = vgg19_bn(pretrained=True).to(device)
 	if args.model == "resnet":
+		print("resnet")
 		model = resnet34(pretrained=True).to(device)
 	elif args.model == "TRADES":
+		print("TRADES")
 		model = ResNet34().to(device)
 		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
 
@@ -538,4 +541,3 @@ def main():
 if __name__ == "__main__":
 	main()
 
-	
