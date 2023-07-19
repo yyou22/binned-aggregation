@@ -29,7 +29,6 @@ from cifar10_models.resnet import resnet18, resnet34
 
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
-parser.add_argument('--resume', action='store_true', help='resume the attack')
 parser.add_argument('--epsilon', default=0.3, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
 parser.add_argument('--model', default='TRADES', help='[vgg16|vgg19|resnet|TRADES], model that is being attacked')
 parser.add_argument('--no-cuda', action='store_true', default=False,
@@ -56,7 +55,7 @@ transform_ = transforms.Compose(
 			]
 		)
 
-epsilon = 0.5
+epsilon = 0.1
 samples = 100
 
 # settings
@@ -335,25 +334,13 @@ def generate_data(test_loader,targeted,samples,start):
 def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	adv_examples = []
 	noise = []
+
 	r = []
-	start_idx = 0
-
-	path = '../data/ZOO/' + args.model + '/' + ''.join(str(epsilon).split('.'))
-
-	if not os.path.exists(path):
-		os.makedirs(path)
-
-	if args.resume:
-		adv_examples = np.load(path + "/adv_X.npy").astype(np.float32).tolist()
-		noise = np.load(path + "/noise.npy").astype(np.float32).tolist()
-		r = np.load(path + "/r.npy").astype(np.float32).tolist()
-		start_idx = len(r)
 
 	print(len(inputs))
-	print('start from', start_idx)
 	print('go up to',len(inputs))
 	# run 1 image at a time, minibatches used for gradient evaluation
-	for i in range(start_idx, len(inputs)):
+	for i in range(len(inputs)):
 		print('tick',i+1)
 
 		input_ = np.array(np.expand_dims(inputs[i], axis=0), dtype=np.float32)
@@ -370,17 +357,6 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 		#append adv_examples
 		adv_examples.append((attack+0.5).transpose(1 , 2 , 0))
 		noise.append((attack-inputs[i]).transpose(1 , 2 , 0))
-
-		#checkpoint
-		adv_examples_ = np.array(adv_examples)
-		noise_ = np.array(noise)
-
-		np.save(path + '/adv_X.npy', adv_examples_)
-		np.save(path + '/noise.npy', noise_)
-		np.save(path + '/r.npy', r)
-
-		print("saved npy: " + str(i))
-
 	r_ = np.array(r)
 	print('r_ shape')
 	print(r_.shape)
@@ -437,10 +413,6 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	#adv = adv.reshape(samples, 3, 32, 32)
 	#adv = inputs
 
-	adv = np.array(adv).astype(np.float32)
-	adv_examples = np.array(adv_examples).astype(np.float32)
-	noise = np.array(noise).astype(np.float32)
-
 	timeend = time.time()
 	print("Took",(timeend-timestart)/60.0,"mins to run",len(inputs),"samples.")
 
@@ -475,8 +447,6 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	#print("Maximum distortions per image: ", distortions)
 
 	distortions = np.sqrt(np.sum((adv - inputs)**2, axis=(1, 2, 3)))
-	print("distortion: ", distortions)
-
 	average_l2_norm = np.mean(distortions)
 	print("Average distortion: ", average_l2_norm)
 
