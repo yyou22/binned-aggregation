@@ -22,7 +22,7 @@ from torch.utils.data import TensorDataset, DataLoader
 parser = argparse.ArgumentParser(description='VGG Extracted Features on adversarial CIFAR10 dataset')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
 parser.add_argument('--epsilon', default=0.3, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
-parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19], model that is being attacked')
+parser.add_argument('--model', default='TRADES', help='[vgg16|vgg19|resnet|TRADES], model that is being attacked')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 parser.add_argument('--test-batch-size', type=int, default=64, metavar='N',
@@ -100,7 +100,7 @@ def main():
 		model = FeatureExtractor(model)
 	elif args.model == "TRADES":
 		model = ResNet34()
-		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt"))
+		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
 		model = FeatureExtractor(model)
 
 	path = './ZOO/data/' + args.model + '/' + ''.join(str(args.epsilon).split('.'))

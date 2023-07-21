@@ -1,5 +1,6 @@
 from __future__ import print_function
 from cifar10_models.vgg import vgg16_bn, vgg19_bn
+from cifar10_models.resnet import resnet18, resnet34
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
@@ -19,7 +20,7 @@ from torch.utils.data import TensorDataset, DataLoader
 
 parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG Models')
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
-parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19|resnet|trades], model that is being attacked')
+parser.add_argument('--model', default='TRADES', help='[vgg16|vgg19|resnet|TRADES], model that is being attacked')
 
 args = parser.parse_args()
 
@@ -73,6 +74,9 @@ def natural(model, X_data, Y_data):
 
 		pred_.append(init_pred)
 
+		#print("pred: ", init_pred)
+		#print("target: ", target)
+
 		if init_pred != target:
 			wrong += 1
 
@@ -101,11 +105,9 @@ def main():
 		model = vgg19_bn(pretrained=True)
 	elif args.model == "resnet":
 		model = resnet34(pretrained=True)
-		model = FeatureExtractor(model)
 	elif args.model == "TRADES":
 		model = ResNet34()
-		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt"))
-		model = FeatureExtractor(model)
+		model.load_state_dict(torch.load("./resnet/model-advres-epoch200.pt", map_location=torch.device('cpu')))
 
 	X_data = np.load("./ZOO/data/X.npy")
 	Y_data = np.load("./ZOO/data/Y.npy")

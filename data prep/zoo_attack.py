@@ -506,7 +506,7 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	pickle.dump(wrong, f)
 	f.close()
 
-	return
+
 
 	#visualization of created cifar10 adv examples 
 	classes = ('plane', 'car', 'bird', 'cat', 'deer', 'dog', 'frog', 'horse', 'ship', 'truck')
@@ -517,7 +517,8 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	plt.figure(figsize=(20, 4 * num_rows)) # adjust the figure size
 
 	#display natural images
-	for i in range(len(inputs)):
+	#for i in range(len(inputs)):
+	for i in range(5):
 		cnt+=1
 		plt.subplot(num_rows, 5, cnt) # replace 10,10 with num_rows,5
 		plt.xticks([], [])
@@ -526,7 +527,8 @@ def attack_main(model, X_data, Y_data, epsilon_):
 		plt.imshow(((inputs[i]+0.5)).transpose(1,2,0))
 
 	#display adversarial images
-	for i in range(len(adv)):
+	#for i in range(len(adv)):
+	for i in range(5):
 		cnt+=1
 		plt.subplot(num_rows, 5, cnt) # replace 10,10 with num_rows,5
 		plt.xticks([], [])

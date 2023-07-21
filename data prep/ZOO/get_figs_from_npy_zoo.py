@@ -50,6 +50,6 @@ def generate_label_txt(label_file_name="Y.npy", parent="../data/ZOO/"):
 adv_data = "adv_X.npy"
 adv_label = "Y_hat.npy"
 
-generate_data_and_noise_png(data_file_name = adv_data, parent = "./")
-generate_label_txt(label_file_name = adv_label, parent = "./")
+generate_data_and_noise_png(data_file_name = adv_data, parent = "./data/vgg16/01/")
+generate_label_txt(label_file_name = adv_label, parent = "./data/vgg16/01/")
 
