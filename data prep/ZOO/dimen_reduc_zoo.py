@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import torchvision
 
 parser = argparse.ArgumentParser(description='dimesionality reduction on FGSM-perturbed CIFAR10 datasets')
-parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19], model that is being attacked')
+parser.add_argument('--model', default='TRADES', help='[vgg16|vgg19], model that is being attacked')
 
 args = parser.parse_args()
 
