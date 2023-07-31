@@ -32,6 +32,9 @@ def main():
 	diff5 = og_data[idx] - adv_data5[idx]
 	diff5 = (diff5 - np.min(diff5)) / (np.max(diff5) - np.min(diff5))
 
+	print(np.max(og_data[idx] - adv_data5[idx]))
+	print(np.min(og_data[idx] - adv_data5[idx]))
+
 	# Create a new figure
 	plt.figure(figsize=(12, 8))
 
@@ -55,11 +58,11 @@ def main():
 	plt.title("Adversarial Data 5")
 	plt.imshow(diff5)
 
-	print(np.min(diff1))
-	print(np.min(diff5))
+	#print(np.min(diff1))
+	#print(np.min(diff5))
 
-	print(np.min(noise1_))
-	print(np.min(noise3_))
+	#print(np.min(noise1_))
+	#print(np.min(noise3_))
 
 	plt.subplot(2, 4, 5)
 	plt.title("Adversarial Data 1 from noise.npy")

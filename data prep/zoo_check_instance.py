@@ -31,7 +31,7 @@ parser = argparse.ArgumentParser(description='FGSM Attack on CIFAR-10 with VGG M
 parser.add_argument('--natural', action='store_true', help='natural prediction on the unperturbed dataset')
 parser.add_argument('--resume', action='store_true', help='resume the attack')
 parser.add_argument('--epsilon', default=0.3, type=float, help='epsilon, the maximum amount of perturbation that can be applied')
-parser.add_argument('--model', default='TRADES', help='[vgg16|vgg19|resnet|TRADES], model that is being attacked')
+parser.add_argument('--model', default='vgg16', help='[vgg16|vgg19|resnet|TRADES], model that is being attacked')
 parser.add_argument('--no-cuda', action='store_true', default=False,
                     help='disables CUDA training')
 
@@ -56,13 +56,15 @@ transform_ = transforms.Compose(
 			]
 		)
 
-epsilon = 0.3
+epsilon = 0.5
 samples = 100
 
 # settings
 use_cuda = not args.no_cuda and torch.cuda.is_available()
 device = torch.device("cuda" if use_cuda else "cpu")
 kwargs = {'num_workers': 1, 'pin_memory': True} if use_cuda else {}
+
+start_idx = 2
 
 """##L2 Black Box Attack"""
 
@@ -261,7 +263,8 @@ def l2_attack(cur_class, input, target, model, targeted, use_log, use_tanh, solv
 				bestl2 = l2s[0]
 				bestscore = np.argmax(scores[0])
 
-			if l2s[0] < out_bestl2 and compare(scores[0],np.argmax(target.cpu().numpy(),-1)) and compare(scores[0],cur_class[0]):
+			#if l2s[0] < out_bestl2 and compare(scores[0],np.argmax(target.cpu().numpy(),-1)) and compare(scores[0],cur_class[0]):
+			if l2s[0] < out_bestl2 and compare(scores[0],np.argmax(target.cpu().numpy(),-1)):
 				#print(np.argmax(scores[0]))
 				#print(cur_class[0])
 				if out_bestl2 == 1e10:
@@ -274,6 +277,14 @@ def l2_attack(cur_class, input, target, model, targeted, use_log, use_tanh, solv
 
 			recent_attack = pert_images[0]
 			recent_score = np.argmax(scores[0])
+
+			diff_ = recent_attack - input[0].cpu().numpy();
+
+			recent_attack_normalized = (diff_ - diff_.min()) / (diff_.max() - diff_.min())
+			recent_attack_normalized = np.transpose(recent_attack_normalized, (1, 2, 0)) # for the case where recent_attack_normalized shape is (channels, height, width)
+
+			plt.imshow(recent_attack_normalized)
+			plt.show()
 	
 		if compare(bestscore,  np.argmax(target.cpu().numpy(),-1)) and bestscore != -1:
 			print('old constant: ', const)
@@ -336,7 +347,7 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	adv_examples = []
 	noise = []
 	r = []
-	start_idx = 0
+	start_idx = 2
 
 	path = '../data/ZOO/' + args.model + '/' + ''.join(str(epsilon).split('.'))
 
@@ -353,7 +364,8 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 	print('start from', start_idx)
 	print('go up to',len(inputs))
 	# run 1 image at a time, minibatches used for gradient evaluation
-	for i in range(start_idx, len(inputs)):
+	#for i in range(start_idx, len(inputs)):
+	for i in range(start_idx, start_idx+1):
 		print('tick',i+1)
 
 		input_ = np.array(np.expand_dims(inputs[i], axis=0), dtype=np.float32)
@@ -375,9 +387,9 @@ def attack(inputs, targets, model, targeted, use_log, use_tanh, solver, device):
 		adv_examples_ = np.array(adv_examples)
 		noise_ = np.array(noise)
 
-		np.save(path + '/adv_X.npy', adv_examples_)
-		np.save(path + '/noise.npy', noise_)
-		np.save(path + '/r.npy', r)
+		#np.save(path + '/adv_X.npy', adv_examples_)
+		#np.save(path + '/noise.npy', noise_)
+		#np.save(path + '/r.npy', r)
 
 		print("saved npy: " + str(i))
 
@@ -490,10 +502,10 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	confid_level = np.array(confid_level)
 	noise = np.array(noise)
 
-	np.save(path + '/adv_X.npy', adv_examples)
-	np.save(path + '/Y_hat.npy', adv_class)
-	np.save(path + '/confid_level.npy', confid_level)
-	np.save(path + '/noise.npy', noise)
+	#np.save(path + '/adv_X.npy', adv_examples)
+	#np.save(path + '/Y_hat.npy', adv_class)
+	#np.save(path + '/confid_level.npy', confid_level)
+	#np.save(path + '/noise.npy', noise)
 
 	print('adv_examples')
 	print(adv_examples.shape)
@@ -502,9 +514,9 @@ def attack_main(model, X_data, Y_data, epsilon_):
 	print('noise')
 	print(noise.shape)
 
-	f = open(path + '/error.pckl', 'wb')
-	pickle.dump(wrong, f)
-	f.close()
+	#f = open(path + '/error.pckl', 'wb')
+	#pickle.dump(wrong, f)
+	#f.close()
 
 
 
@@ -518,23 +530,25 @@ def attack_main(model, X_data, Y_data, epsilon_):
 
 	#display natural images
 	#for i in range(len(inputs)):
-	for i in range(5):
+	#for i in range(5):
+	for i in range(start_idx, start_idx+1):
 		cnt+=1
 		plt.subplot(num_rows, 5, cnt) # replace 10,10 with num_rows,5
 		plt.xticks([], [])
 		plt.yticks([], [])
-		plt.title("{}->{}".format(classes[valid_class[i]],classes[adv_class[i]]))
-		plt.imshow(((inputs[i]+0.5)).transpose(1,2,0))
+		plt.title("{}->{}".format(classes[valid_class[start_idx]],classes[adv_class[0]]))
+		plt.imshow(((inputs[start_idx]+0.5)).transpose(1,2,0))
 
 	#display adversarial images
 	#for i in range(len(adv)):
-	for i in range(5):
+	#for i in range(5):
+	for i in range(1):
 		cnt+=1
 		plt.subplot(num_rows, 5, cnt) # replace 10,10 with num_rows,5
 		plt.xticks([], [])
 		plt.yticks([], [])
-		plt.title("{}->{}".format(classes[valid_class[i]],classes[adv_class[i]]))
-		plt.imshow(((adv[i]+0.5)).transpose(1,2,0))
+		plt.title("{}->{}".format(classes[valid_class[start_idx]],classes[adv_class[0]]))
+		plt.imshow(((adv[0]+0.5)).transpose(1,2,0))
 		
 	plt.tight_layout()
 	plt.show()
